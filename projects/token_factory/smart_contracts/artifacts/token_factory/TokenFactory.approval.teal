@@ -1,0 +1,272 @@
+#pragma version 10
+
+smart_contracts.token_factory.contract.TokenFactory.approval_program:
+    // smart_contracts/token_factory/contract.py:4
+    // class TokenFactory(ARC4Contract):
+    txn NumAppArgs
+    bz main_bare_routing@8
+    method "create_asset(string,string)void"
+    method "set_price(uint64)void"
+    method "sell_asset(pay,uint64)void"
+    method "get_asset_id()uint64"
+    txna ApplicationArgs 0
+    match main_create_asset_route@2 main_set_price_route@3 main_sell_asset_route@4 main_get_asset_id_route@5
+    err // reject transaction
+
+main_create_asset_route@2:
+    // smart_contracts/token_factory/contract.py:8
+    // @arc4.abimethod()
+    txn OnCompletion
+    !
+    assert // OnCompletion is NoOp
+    txn ApplicationID
+    assert // is not creating
+    // smart_contracts/token_factory/contract.py:4
+    // class TokenFactory(ARC4Contract):
+    txna ApplicationArgs 1
+    extract 2 0
+    txna ApplicationArgs 2
+    extract 2 0
+    // smart_contracts/token_factory/contract.py:8
+    // @arc4.abimethod()
+    callsub create_asset
+    int 1
+    return
+
+main_set_price_route@3:
+    // smart_contracts/token_factory/contract.py:19
+    // @arc4.abimethod()
+    txn OnCompletion
+    !
+    assert // OnCompletion is NoOp
+    txn ApplicationID
+    assert // is not creating
+    // smart_contracts/token_factory/contract.py:4
+    // class TokenFactory(ARC4Contract):
+    txna ApplicationArgs 1
+    btoi
+    // smart_contracts/token_factory/contract.py:19
+    // @arc4.abimethod()
+    callsub set_price
+    int 1
+    return
+
+main_sell_asset_route@4:
+    // smart_contracts/token_factory/contract.py:24
+    // @arc4.abimethod()
+    txn OnCompletion
+    !
+    assert // OnCompletion is NoOp
+    txn ApplicationID
+    assert // is not creating
+    // smart_contracts/token_factory/contract.py:4
+    // class TokenFactory(ARC4Contract):
+    txn GroupIndex
+    int 1
+    -
+    dup
+    gtxns TypeEnum
+    int pay
+    ==
+    assert // transaction type is pay
+    txna ApplicationArgs 1
+    btoi
+    // smart_contracts/token_factory/contract.py:24
+    // @arc4.abimethod()
+    callsub sell_asset
+    int 1
+    return
+
+main_get_asset_id_route@5:
+    // smart_contracts/token_factory/contract.py:37
+    // @arc4.abimethod
+    txn OnCompletion
+    !
+    assert // OnCompletion is NoOp
+    txn ApplicationID
+    assert // is not creating
+    callsub get_asset_id
+    itob
+    byte 0x151f7c75
+    swap
+    concat
+    log
+    int 1
+    return
+
+main_bare_routing@8:
+    // smart_contracts/token_factory/contract.py:4
+    // class TokenFactory(ARC4Contract):
+    txn OnCompletion
+    !
+    assert // reject transaction
+    txn ApplicationID
+    !
+    assert // is creating
+    int 1
+    return
+
+
+// smart_contracts.token_factory.contract.TokenFactory.create_asset(asset_name: bytes, unit_name: bytes) -> void:
+create_asset:
+    // smart_contracts/token_factory/contract.py:8-9
+    // @arc4.abimethod()
+    // def create_asset(self, asset_name:String, unit_name:String) ->None:
+    proto 2 0
+    // smart_contracts/token_factory/contract.py:10-16
+    // self.asset_created = itxn.AssetConfig (
+    //     asset_name= asset_name,
+    //     unit_name= unit_name,
+    //     total= 10_000,
+    //     decimals= 1,
+    //     default_frozen=False
+    // ).submit().created_asset.id
+    itxn_begin
+    // smart_contracts/token_factory/contract.py:15
+    // default_frozen=False
+    int 0
+    itxn_field ConfigAssetDefaultFrozen
+    // smart_contracts/token_factory/contract.py:14
+    // decimals= 1,
+    int 1
+    itxn_field ConfigAssetDecimals
+    // smart_contracts/token_factory/contract.py:13
+    // total= 10_000,
+    int 10000
+    itxn_field ConfigAssetTotal
+    frame_dig -1
+    itxn_field ConfigAssetUnitName
+    frame_dig -2
+    itxn_field ConfigAssetName
+    // smart_contracts/token_factory/contract.py:10
+    // self.asset_created = itxn.AssetConfig (
+    int acfg
+    itxn_field TypeEnum
+    int 0
+    itxn_field Fee
+    // smart_contracts/token_factory/contract.py:10-16
+    // self.asset_created = itxn.AssetConfig (
+    //     asset_name= asset_name,
+    //     unit_name= unit_name,
+    //     total= 10_000,
+    //     decimals= 1,
+    //     default_frozen=False
+    // ).submit().created_asset.id
+    itxn_submit
+    // smart_contracts/token_factory/contract.py:10
+    // self.asset_created = itxn.AssetConfig (
+    byte "asset_created"
+    // smart_contracts/token_factory/contract.py:10-16
+    // self.asset_created = itxn.AssetConfig (
+    //     asset_name= asset_name,
+    //     unit_name= unit_name,
+    //     total= 10_000,
+    //     decimals= 1,
+    //     default_frozen=False
+    // ).submit().created_asset.id
+    itxn CreatedAssetID
+    app_global_put
+    retsub
+
+
+// smart_contracts.token_factory.contract.TokenFactory.set_price(unitary_price: uint64) -> void:
+set_price:
+    // smart_contracts/token_factory/contract.py:19-20
+    // @arc4.abimethod()
+    // def set_price(self, unitary_price:UInt64)->None:
+    proto 1 0
+    // smart_contracts/token_factory/contract.py:21
+    // assert Txn.sender == Global.creator_address
+    txn Sender
+    global CreatorAddress
+    ==
+    assert
+    // smart_contracts/token_factory/contract.py:22
+    // self.unitary_price = unitary_price
+    byte "unitary_price"
+    frame_dig -1
+    app_global_put
+    retsub
+
+
+// smart_contracts.token_factory.contract.TokenFactory.sell_asset(buyer_txn: uint64, quantity: uint64) -> void:
+sell_asset:
+    // smart_contracts/token_factory/contract.py:24-25
+    // @arc4.abimethod()
+    // def sell_asset(self, buyer_txn: gtxn.PaymentTransaction, quantity: UInt64) ->None:
+    proto 2 0
+    // smart_contracts/token_factory/contract.py:26
+    // assert buyer_txn.sender == Txn.sender
+    frame_dig -2
+    gtxns Sender
+    txn Sender
+    ==
+    assert
+    // smart_contracts/token_factory/contract.py:27
+    // assert buyer_txn.receiver == Global.current_application_address
+    frame_dig -2
+    gtxns Receiver
+    global CurrentApplicationAddress
+    ==
+    assert
+    // smart_contracts/token_factory/contract.py:28
+    // assert buyer_txn.amount == self.unitary_price * quantity
+    frame_dig -2
+    gtxns Amount
+    int 0
+    byte "unitary_price"
+    app_global_get_ex
+    assert // check unitary_price exists
+    frame_dig -1
+    *
+    ==
+    assert
+    // smart_contracts/token_factory/contract.py:30-34
+    // itxn.AssetTransfer(
+    //     xfer_asset=self.asset_created,
+    //     asset_receiver= Txn.sender,
+    //     asset_amount=quantity
+    // ).submit()
+    itxn_begin
+    // smart_contracts/token_factory/contract.py:31
+    // xfer_asset=self.asset_created,
+    int 0
+    byte "asset_created"
+    app_global_get_ex
+    assert // check asset_created exists
+    // smart_contracts/token_factory/contract.py:32
+    // asset_receiver= Txn.sender,
+    txn Sender
+    frame_dig -1
+    itxn_field AssetAmount
+    itxn_field AssetReceiver
+    itxn_field XferAsset
+    // smart_contracts/token_factory/contract.py:30
+    // itxn.AssetTransfer(
+    int axfer
+    itxn_field TypeEnum
+    int 0
+    itxn_field Fee
+    // smart_contracts/token_factory/contract.py:30-34
+    // itxn.AssetTransfer(
+    //     xfer_asset=self.asset_created,
+    //     asset_receiver= Txn.sender,
+    //     asset_amount=quantity
+    // ).submit()
+    itxn_submit
+    retsub
+
+
+// smart_contracts.token_factory.contract.TokenFactory.get_asset_id() -> uint64:
+get_asset_id:
+    // smart_contracts/token_factory/contract.py:37-38
+    // @arc4.abimethod
+    // def get_asset_id(self)-> UInt64:
+    proto 0 1
+    // smart_contracts/token_factory/contract.py:39
+    // return self.asset_created
+    int 0
+    byte "asset_created"
+    app_global_get_ex
+    assert // check asset_created exists
+    retsub

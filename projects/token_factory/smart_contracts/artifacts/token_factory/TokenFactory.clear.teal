@@ -1,0 +1,7 @@
+#pragma version 10
+
+smart_contracts.token_factory.contract.TokenFactory.clear_state_program:
+    // smart_contracts/token_factory/contract.py:4
+    // class TokenFactory(ARC4Contract):
+    int 1
+    return
